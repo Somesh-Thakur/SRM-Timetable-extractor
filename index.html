@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semester 1 Timetable Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            boxShadow: {
+              soft: '0 12px 30px rgba(15, 23, 42, 0.28)',
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      body {
+        background:
+          radial-gradient(circle at top, rgba(59, 130, 246, 0.18), transparent 28%),
+          linear-gradient(180deg, #020817 0%, #0f172a 100%);
+        min-height: 100vh;
+      }
+
+      .glass {
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        backdrop-filter: blur(10px);
+      }
+
+      .class-card {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.95));
+        border: 1px solid rgba(148, 163, 184, 0.18);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+      }
+
+      .class-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(96, 165, 250, 0.5);
+      }
+
+      .time-badge {
+        background: rgba(59, 130, 246, 0.12);
+        color: #bfdbfe;
+        border: 1px solid rgba(96, 165, 250, 0.3);
+      }
+
+      .placeholder {
+        background: rgba(15, 23, 42, 0.75);
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+      }
+
+      .date-input {
+        width: 100%;
+        min-height: 52px;
+        appearance: none;
+        -webkit-appearance: none;
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.92));
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 1rem;
+        color: #f8fafc;
+        font-size: 0.95rem;
+        font-weight: 500;
+        padding: 0.875rem 1rem;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+        touch-action: manipulation;
+      }
+
+      .date-input:focus {
+        outline: none;
+        border-color: rgba(96, 165, 250, 0.7);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+      }
+
+      .date-input::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(0.9) brightness(1.15);
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      .date-input::-webkit-datetime-edit {
+        color: #f8fafc;
+      }
+    </style>
+  </head>
+  <body class="text-slate-100 antialiased">
+    <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+      <header class="glass shadow-soft mb-6 rounded-2xl p-4 sm:p-6">
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p class="text-xs font-medium uppercase tracking-[0.2em] text-sky-300/80">Semester 1 Timetable</p>
+            <h1 id="selectedDate" class="mt-2 text-2xl font-semibold text-white sm:text-3xl">--</h1>
+          </div>
+
+          <div class="flex items-center gap-3 sm:justify-end">
+            <div class="rounded-full border border-sky-400/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-200">
+              Day Order: <span id="dayOrderLabel" class="font-semibold text-white">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded-2xl border border-slate-700 bg-slate-900/60 p-3 sm:p-4">
+          <label for="datePicker" class="mb-2 block text-xs font-medium uppercase tracking-[0.18em] text-slate-400">Select date</label>
+          <div class="relative">
+            <input
+              id="datePicker"
+              type="date"
+              class="date-input cursor-pointer"
+              aria-label="Select date"
+            />
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section id="classList" class="space-y-4"></section>
+      </main>
+    </div>
+
+    <script>
+      const state = {
+        data: null,
+        selectedDate: '',
+      };
+
+      const elements = {
+        selectedDate: document.getElementById('selectedDate'),
+        dayOrderLabel: document.getElementById('dayOrderLabel'),
+        datePicker: document.getElementById('datePicker'),
+        classList: document.getElementById('classList'),
+      };
+
+      function formatDateToDDMMYYYY(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}-${month}-${year}`;
+      }
+
+      function parseDDMMYYYY(dateString) {
+        const [day, month, year] = dateString.split('-').map(Number);
+        return new Date(year, month - 1, day);
+      }
+
+      function convertDDMMYYYYToISO(dateString) {
+        const date = parseDDMMYYYY(dateString);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
+      function humanizeDayOrder(dayOrder) {
+        if (!dayOrder || dayOrder === 'Holiday') {
+          return 'Holiday';
+        }
+
+        return dayOrder;
+      }
+
+      function getDayOrderForDate(dateString) {
+        if (!state.data || !state.data.academicCalendar) {
+          return 'No Schedule';
+        }
+
+        const calendar = state.data.academicCalendar;
+        return calendar[dateString] || 'No Schedule';
+      }
+
+      function renderNoClasses(message = 'No classes today') {
+        elements.classList.innerHTML = `
+          <div class="placeholder rounded-2xl p-8 text-center shadow-soft">
+            <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-2xl text-sky-300">✦</div>
+            <h2 class="text-xl font-semibold text-white">${message}</h2>
+            <p class="mt-2 text-sm text-slate-400">Enjoy the break or plan ahead for the next scheduled day.</p>
+          </div>
+        `;
+      }
+
+      function renderClassCards(dayOrder) {
+        const timetableGrid = state.data?.timetableGrid || {};
+        const daySchedule = timetableGrid[dayOrder] || {};
+        const entries = Object.entries(daySchedule).filter(([slot, courseCode]) => {
+          return slot && slot.trim() && courseCode && String(courseCode).trim();
+        });
+
+        if (dayOrder === 'Holiday' || entries.length === 0) {
+          const message = dayOrder === 'No Schedule' ? 'No timetable data for this date' : 'No classes today';
+          renderNoClasses(message);
+          return;
+        }
+
+        const courseDetails = state.data?.courseDetails || {};
+
+        const cards = entries.map(([timeSlot, courseCode]) => {
+          const details = courseDetails[courseCode] || {};
+          const courseName = details.courseName || courseCode;
+          const building = details.building || 'Building TBD';
+          const floor = details.floor || 'Floor TBD';
+          const roomName = details.roomName || 'Room TBD';
+          const faculty = details.faculty || 'Faculty TBD';
+
+          return `
+            <article class="class-card rounded-2xl p-4 shadow-soft">
+              <div class="flex items-center justify-between gap-3">
+                <span class="time-badge inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold tracking-wide">${timeSlot}</span>
+                <span class="rounded-full border border-slate-700 bg-slate-800/80 px-2 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-300">${courseCode}</span>
+              </div>
+
+              <h3 class="mt-4 text-lg font-semibold text-white">${courseName}</h3>
+
+              <div class="mt-4 space-y-2 text-sm text-slate-300">
+                <div class="flex items-start gap-2">
+                  <span class="mt-0.5 text-sky-300">▣</span>
+                  <span>${building}</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="mt-0.5 text-sky-300">⌂</span>
+                  <span>${floor} • ${roomName}</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <span class="mt-0.5 text-sky-300">◍</span>
+                  <span>${faculty}</span>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('');
+
+        elements.classList.innerHTML = cards;
+      }
+
+      function renderDashboard() {
+        if (!state.data) {
+          return;
+        }
+
+        const dayOrder = getDayOrderForDate(state.selectedDate);
+        elements.selectedDate.textContent = state.selectedDate;
+        elements.dayOrderLabel.textContent = humanizeDayOrder(dayOrder);
+        elements.datePicker.value = convertDDMMYYYYToISO(state.selectedDate);
+
+        renderClassCards(dayOrder);
+      }
+
+      async function initializeApp() {
+        try {
+          const response = await fetch('./schedule_data.json', { cache: 'no-store' });
+          if (!response.ok) {
+            throw new Error(`Failed to load schedule data: ${response.status}`);
+          }
+
+          state.data = await response.json();
+
+          const today = new Date();
+          state.selectedDate = formatDateToDDMMYYYY(today);
+          renderDashboard();
+        } catch (error) {
+          console.error(error);
+          elements.selectedDate.textContent = 'Could not load timetable';
+          elements.dayOrderLabel.textContent = 'Unavailable';
+          elements.classList.innerHTML = `
+            <div class="placeholder rounded-2xl p-8 text-center shadow-soft">
+              <h2 class="text-xl font-semibold text-white">Unable to load timetable</h2>
+              <p class="mt-2 text-sm text-slate-400">Please ensure schedule_data.json is available in the same folder as this page.</p>
+            </div>
+          `;
+        }
+      }
+
+      elements.datePicker.addEventListener('change', (event) => {
+        const selectedIsoDate = event.target.value;
+        if (!selectedIsoDate) {
+          return;
+        }
+
+        const [year, month, day] = selectedIsoDate.split('-').map(Number);
+        state.selectedDate = `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+        renderDashboard();
+      });
+
+      initializeApp();
+    </script>
+  </body>
+</html>
