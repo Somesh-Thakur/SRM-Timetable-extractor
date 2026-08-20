@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <title>Semester 1 Timetable Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -253,7 +256,7 @@
 
       async function initializeApp() {
         try {
-          const response = await fetch('./schedule_data.json', { cache: 'no-store' });
+          const response = await fetch('./schedule_data.json');
           if (!response.ok) {
             throw new Error(`Failed to load schedule data: ${response.status}`);
           }
@@ -288,6 +291,15 @@
       });
 
       initializeApp();
+    </script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((error) => {
+            console.error('Service worker registration failed:', error);
+          });
+        });
+      }
     </script>
   </body>
 </html>
