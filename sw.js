@@ -1,4 +1,4 @@
-const CACHE_NAME = 'srm-timetable-v1';
+const CACHE_NAME = 'srm-timetable-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -30,6 +30,24 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const requestUrl = new URL(event.request.url);
+
+  // Keep timetable data fresh online while still supporting offline fallback.
+  if (requestUrl.origin === self.location.origin && requestUrl.pathname.endsWith('/schedule_data.json')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(event.request))
+    );
     return;
   }
 
